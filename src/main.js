@@ -1,4 +1,7 @@
-import { createApp } from 'vue'
-import App from './App.vue'
+import { createApp } from "vue";
+import App from "./App.vue";
+import * as THREE from "three";
 
-createApp(App).mount('#app')
+const app = createApp(App);
+app.config.globalProperties.$THREE = THREE;
+app.mount("#app");
