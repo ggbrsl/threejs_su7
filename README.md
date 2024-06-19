@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# threejs_su7
-=======
 # threejs_su7
 
 ## Project setup
@@ -25,4 +22,3 @@ npm run lint
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).
->>>>>>> 86de9e8 (init)
