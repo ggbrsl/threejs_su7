@@ -3,10 +3,21 @@
 </template>
 
 <script>
-import { onMounted } from 'vue';
-onMounted(()=>{
-  
-})
+import { defineComponent, onMounted } from "vue";
+import { getCurrentInstance } from "vue";
+import Basic from "./Basic";
+export default defineComponent({
+  setup() {
+    const { proxy } = getCurrentInstance();
+    const Three = proxy.$THREE;
+    onMounted(() => {
+      const instance = new Basic("sketch");
+      instance.initPostGrocess();
+      instance.addModle("./gltf/su7/scene.gltf");
+    });
+    return {};
+  },
+});
 </script>
 
 <style>

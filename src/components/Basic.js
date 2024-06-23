@@ -1,14 +1,49 @@
-import { getCurrentInstance } from "vue";
 import Stats from "stats.js";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
-const { proxy } = getCurrentInstance();
-const Three = proxy.$THREE;
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import DynamicEnv from "./DynamicEnv";
+import * as Three from "three";
 
-import envLight from "../../public/textures/t_env_light.hdr";
+import {
+  BlendFunction,
+  EffectPass,
+  EffectComposer,
+  SelectiveBloomEffect,
+  RenderPass,
+} from "postprocessing";
 
 export default class Basic {
+  bloomEffect;
   constructor(selector) {
+    this.params = {
+      speed: 0,
+      cameraPos: {
+        x: 0,
+        y: 0.8,
+        z: -11,
+      },
+      isCameraMoving: false,
+      lightAlpha: 0,
+      lightIntensity: 0,
+      envIntensity: 0,
+      envWeight: 0,
+      reflectIntensity: 0,
+      lightOpacity: 1,
+      floorLerpColor: 0,
+      carBodyEnvIntensity: 1,
+      cameraShakeIntensity: 0,
+      bloomLuminanceSmoothing: 1.6,
+      bloomIntensity: 1,
+      speedUpOpacity: 0,
+      cameraFov: 33.4,
+      furinaLerpColor: 0,
+      isRushing: false,
+      disableInteract: false, // 禁用交互
+      isFurina: window.location.hash === "#furina",
+    };
+
     this.domId = selector;
     // 场景
     this.scene = new Three.Scene();
@@ -16,15 +51,15 @@ export default class Basic {
     this.scene.position.y = -2.8;
     this.clock = new Three.Clock(); // 时钟
     this.container = document.getElementById(selector);
-    this.width = this.container.width;
-    this.height = this.container.height;
+    this.width = this.container.offsetWidth;
+    this.height = this.container.offsetHeight;
 
     this.renderer = new Three.WebGLRenderer({ antialias: true }); // 抗锯齿
     this.renderer.setPixelRatio(window.devicePixelRatio); // 像素比
     this.renderer.setSize(this.width, this.height);
     this.renderer.setClearColor(0x000000, 1); // 颜色及透明度
     // 使用 ACES Filmic Tone Mapping
-    this.renderer.toneMapping = new Three.ACESFilmicToneMapping();
+    this.renderer.toneMapping = Three.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0; // 调整曝光以获得最佳效果
     this.renderer.localClippingEnabled = true; // 使用剪裁平面
 
@@ -40,7 +75,15 @@ export default class Basic {
       1,
       100
     );
-    this.camera.position.set(0, 0, 22);
+    this.camera.fov = this.params.cameraFov; // 设置相机可见范围(度数：0到180)
+    const cameraPos = new Three.Vector3(
+      this.params.cameraPos.x,
+      this.params.cameraPos.y,
+      this.params.cameraPos.z
+    );
+    this.camera.position.copy(cameraPos);
+    this.camera.lookAt(new Three.Vector3(0, 0.8, 0));
+
     this.controls = new OrbitControls(this.camera, this.renderer.domElement); // 轨道控制器
     this.controls.enableDamping = true; // 启用阻尼，旋转增加惯性效果
     this.controls.dampingFactor = 0.25; // 阻尼系数，范围一般在 0 到 1 之间
@@ -49,22 +92,140 @@ export default class Basic {
     this.controls.maxPolarAngle = Math.PI / 2; // 控制相机最大仰角为90度
     this.controls.update();
 
+    this.composer = "";
+
     // 环境贴图
-    new RGBELoader().load(
-      envLight,
-      (texture) => {
-        texture.mapping = Three.EquirectangularReflectionMapping();
-        this.scene.environment = texture;
-      },
-      null,
-      (err) => {
-        console.log("RGBELoader error:", err);
-      }
-    );
+    this.initHDRTexture(
+      "./textures/t_env_night.hdr",
+      "./textures/t_env_light.hdr"
+    ).then((textureMap) => {
+      const dynamicEnv = new DynamicEnv(this, textureMap);
+      this.dynamicEnv = dynamicEnv;
+      this.scene.environment = dynamicEnv.envMap;
+      dynamicEnv.setWeight(1);
+    });
+
+    // 进入动画
 
     this.setupResize();
     this.render();
   }
+
+  // 进入动画
+
+  // 初始化渲染平面
+  initPlane() {
+    this.localPlane = new Three.Plane(new Three.Vector3(-1, 0, 0), 0);
+    this.localPlane.constant = 13;
+  }
+  // 初始化地板几何体
+  initReflector() {
+    let geo = new Three.PlaneGeometry(64, 64);
+    let floor = new ReflectFloorMesh(geo, {
+      textureWidth: 512,
+      textureHeight: 512,
+    });
+    floor.rotation.x = -Math.PI / 2;
+    floor.rotation.y = -0.0001;
+    this.scene.add(floor);
+  }
+  // shader实现自定义泛光效果
+  initComposer() {
+    const effect = new SelectiveBloomEffect(this.scene, this.camera, {
+      blendFunction: BlendFunction.ADD, // 控制颜色混合方式，将源颜色和目标颜色相加
+      mipmapBlur: true, // 纹理映射
+      luminanceThreshold: 0, // 亮度阈值，亮度高于该阈值才有泛光效果
+      luminanceSmoothing: 0.8, // 平滑亮度阈值的国度，使泛光效果更佳自然
+      opacity: 0.6, // 透明度
+      intensity: 3.0, // 泛光强度，值越大，泛光效果越明显
+    });
+    effect.selection.set([]); // 指定泛光效果的对象
+    effect.inverted = true; // 泛光效果应用于所有未选择对象
+    effect.ignoreBackground = true;
+    const material = new Three.MeshBasicMaterial({ color: 0x3fffff });
+    const geometry = new Three.PlaneGeometry(5, 5, 10, 10); // 平面沿x轴宽度，平面沿y轴高度，宽度分段，高度分段
+    const plane = new Three.Mesh(geometry, material);
+    const plane2 = new Three.Mesh(geometry, material);
+    plane2.position.x = 6;
+    plane2.position.y = 6;
+    plane.position.y = 6;
+    plane.scale.set(0.01, 0.01, 0.01); // 大小缩小到原来的1%
+    plane2.scale.set(0.01, 0.01, 0.01);
+    effect.selection.set([plane]);
+
+    this.bloomEffect = effect;
+    let composerBloom = new EffectComposer(this.renderer);
+    composerBloom.addPass(new RenderPass(this.scene, this.camera)); // RenderPass渲染整个场景或对象到纹理上
+    const effectPass = new EffectPass(this.camera, effect); // EffectPass应用到最终输出
+    composerBloom.addPass(effectPass);
+    this.composer = composerBloom;
+  }
+  initPostGrocess() {
+    this.initPlane();
+    // this.initReflector();
+    this.initComposer();
+  }
+  addModle(path) {
+    const dracoLoader = new DRACOLoader();
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader = dracoLoader;
+    // loader.dracoLoader.dispose();
+    loader.load(
+      path,
+      (gltf) => {
+        gltf.scene.scale.set(2, 2, 2);
+        gltf.scene.position.y = 0.2;
+        gltf.scene.name = "carScene";
+        console.log("gltf:", gltf.scene.children);
+        gltf.scene.traverse((item) => {
+          if (item.isMesh) {
+            // 金属材质
+            item.material.clippingPlanes = [this.localPlane]; // 限制材质的渲染范围，设定裁剪平面
+            item.stencilRef = 1;
+            item.stencilWrite = true;
+            item.stencilWriteMask = 0xff;
+            item.stencilZPass = Three.ReplaceStencilOp;
+            item.geometry.computeVertexNormals();
+          }
+        });
+        this.scene.add(gltf.scene);
+      },
+      undefined,
+      (err) => {
+        console.log("gltf error:", err);
+      }
+    );
+  }
+  // load方法包装成promise
+  loadHDRTexture(url) {
+    return new Promise((resolve, reject) => {
+      new RGBELoader().load(
+        url,
+        (texture) => resolve(texture),
+        undefined,
+        (error) => reject(error)
+      );
+    });
+  }
+  getEnvMapFromHDRTexture(texture) {
+    const pmremGenerator = new Three.PMREMGenerator(this.renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const envmap = pmremGenerator.fromEquirectangular(texture).texture;
+    console.log("envmap:", envmap);
+    pmremGenerator.dispose();
+    return envmap;
+  }
+  async initHDRTexture(url1, url2) {
+    const texture1 = await this.loadHDRTexture(url1);
+    const envMap1 = this.getEnvMapFromHDRTexture(texture1);
+    const texture2 = await this.loadHDRTexture(url2);
+    const envMap2 = this.getEnvMapFromHDRTexture(texture2);
+    return {
+      envMap1,
+      envMap2,
+    };
+  }
+
   setupResize() {
     window.addEventListener("resize", this.resize.bind(this));
   }
@@ -78,7 +239,7 @@ export default class Basic {
   }
   render() {
     this.stats.begin();
-
+    this.composer && this.composer.render();
     this.stats.end();
 
     requestAnimationFrame(this.render.bind(this));
