@@ -11,6 +11,8 @@
     "core-js": "^3.8.3",
     "glslify": "^7.1.1",
     "glslify-loader": "^2.0.0",
+    "gsap": "^3.12.5",
+    "mitt": "^3.0.1",
     "postprocessing": "^6.35.5",
     "raw-loader": "^4.0.2",
     "stats.js": "^0.17.0",
@@ -20,9 +22,12 @@
   "devDependencies": {
     "@babel/core": "^7.12.16",
     "@babel/eslint-parser": "^7.12.16",
+    "@babel/plugin-transform-modules-commonjs": "^7.24.7",
+    "@babel/plugin-transform-strict-mode": "^7.24.7",
     "@vue/cli-plugin-babel": "~5.0.0",
     "@vue/cli-plugin-eslint": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
+    "babel-plugin-transform-remove-strict-mode": "0.0.2",
     "eslint": "^7.32.0",
     "eslint-plugin-vue": "^8.0.3"
   },

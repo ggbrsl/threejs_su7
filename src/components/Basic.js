@@ -5,6 +5,7 @@ import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import DynamicEnv from "./DynamicEnv";
 import * as Three from "three";
+import gsap from "gsap";
 
 import {
   BlendFunction,
@@ -13,6 +14,10 @@ import {
   SelectiveBloomEffect,
   RenderPass,
 } from "postprocessing";
+import Emitter from "./Tool/Emitter";
+// import mitt from "mitt";
+import LoadManager from "./Tool/LoadManager";
+import { resources } from "./resource";
 
 export default class Basic {
   bloomEffect;
@@ -44,6 +49,14 @@ export default class Basic {
       isFurina: window.location.hash === "#furina",
     };
 
+    // 加载器
+    // this.emitter = new Emitter()
+    // this.emitter = mitt()
+    const resourcesToLoad = resources
+    this.loadManager = new LoadManager(this, resourcesToLoad)
+
+    console.log("this.loadManager:", this.loadManager)
+
     this.domId = selector;
     // 场景
     this.scene = new Three.Scene();
@@ -63,7 +76,8 @@ export default class Basic {
     this.renderer.toneMappingExposure = 1.0; // 调整曝光以获得最佳效果
     this.renderer.localClippingEnabled = true; // 使用剪裁平面
 
-    this.stats = new Stats(); // 渲染性能监控
+    // 渲染性能监控
+    this.stats = new Stats();
     this.container.appendChild(this.stats.dom);
 
     this.container.appendChild(this.renderer.domElement);
@@ -95,23 +109,84 @@ export default class Basic {
     this.composer = "";
 
     // 环境贴图
-    this.initHDRTexture(
-      "./textures/t_env_night.hdr",
-      "./textures/t_env_light.hdr"
-    ).then((textureMap) => {
-      const dynamicEnv = new DynamicEnv(this, textureMap);
-      this.dynamicEnv = dynamicEnv;
-      this.scene.environment = dynamicEnv.envMap;
-      dynamicEnv.setWeight(1);
-    });
+    Emitter.on("ready", (a) => {
+      console.log("~~~~~~~", a)
+      const envMap1 = this.loadManager.items["ut_env_night"]
+      const envMap2 = this.loadManager.items["ut_env_light"]
+      const dynamicEnv = new DynamicEnv(this, {
+        envMap1,
+        envMap2
+      })
+      this.dynamicEnv = dynamicEnv
+      this.scene.environment = dynamicEnv.envMap
+      dynamicEnv.setWeight(1)
 
-    // 进入动画
+      // 时间轴
+      const t1 = gsap.timeline()
+      this.t1 = t1
+      const t2 = gsap.timeline()
+      this.t2 = t2
+      console.log("before enter")
+      this.enter()
+    })
+
+    // this.initHDRTexture(
+    //   "./textures/t_env_night.hdr",
+    //   "./textures/t_env_light.hdr"
+    // ).then((textureMap) => {
+    //   const dynamicEnv = new DynamicEnv(this, textureMap);
+    //   this.dynamicEnv = dynamicEnv;
+    //   this.scene.environment = dynamicEnv.envMap;
+    //   dynamicEnv.setWeight(1);
+    // });
+
+    Emitter.on("enter", () => {
+      this.params.disableInteract = false
+    })
 
     this.setupResize();
     this.render();
   }
-
   // 进入动画
+  enter() {
+    this.params.disableInteract = true
+    console.log("this.dynamicEnv:", this.dynamicEnv)
+    this.dynamicEnv.setWeight(0)
+    this.dynamicEnv.setIntensity(0)
+
+    this.params.isCameraMoving = true
+    console.log("enter")
+    this.t1.to(this.params.cameraPos, {
+      x: 0,
+      y: 0.8,
+      z: -7,
+      duration: 8,   // 总时长四秒
+      ease: "power2.inOut",   // 控制动画过程中的变化速率
+      onComplete: () => {   // 当动画完成时运行的函数
+        // console.log("onComplete")
+        this.params.isCameraMoving = false
+        Emitter.emit("enter")
+      }
+    })
+    this.t2.to(this.params, {
+      envIntensity: 1,
+      duration: 4,
+      delay: 0.5,
+      ease: "power2.inOut",
+      onUpdate: () => {    // 每次动画更新执行
+        // console.log("onUpdate")
+        this.dynamicEnv.setIntensity(this.params.envIntensity)
+      }
+    }).to(this.params, {
+      envWeight: 1,
+      duration: 4,
+      ease: "power2.inOut",
+      onUpdate: () => {
+        // console.log("onUpdate")
+        this.dynamicEnv.setWeight(this.params.envWeight)
+      }
+    }, "-=2.5")   // -=2.5:时间轴上，上一个动画结束前，2.5秒的位置
+  }
 
   // 初始化渲染平面
   initPlane() {

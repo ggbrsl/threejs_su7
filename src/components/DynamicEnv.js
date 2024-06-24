@@ -1,5 +1,5 @@
 import * as Three from "three";
-import FBO from "./FBO";
+import FBO from "./Tool/FBO";
 
 import dynamicEnvVertexShader from "../shaders/dynamicEnv/vert.glsl";
 import dynamicEnvFragmentShader from "../shaders/dynamicEnv/frag.glsl";
@@ -7,7 +7,6 @@ import dynamicEnvFragmentShader from "../shaders/dynamicEnv/frag.glsl";
 export default class DynamicEnv {
   constructor(base, config = {}) {
     const { envMap1, envMap2 } = config;
-    console.log("!!!!!!:", envMap1, envMap2);
     const envData = envMap1.source.data;
     const fbo = new FBO(base, {
       width: envData.width,
