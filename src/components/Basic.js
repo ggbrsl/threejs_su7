@@ -18,6 +18,8 @@ import Emitter from "./Tool/Emitter";
 // import mitt from "mitt";
 import LoadManager from "./Tool/LoadManager";
 import { resources } from "./resource";
+import StartRoom from "./StartRoom";
+import { onUpdated } from "vue";
 
 export default class Basic {
   bloomEffect;
@@ -109,10 +111,11 @@ export default class Basic {
     this.composer = "";
 
     // 环境贴图
-    Emitter.on("ready", (a) => {
-      console.log("~~~~~~~", a)
-      const envMap1 = this.loadManager.items["ut_env_night"]
-      const envMap2 = this.loadManager.items["ut_env_light"]
+    Emitter.on("ready", () => {
+      const texture1 = this.loadManager.items["ut_env_night"]
+      const envMap1 = this.getEnvMapFromHDRTexture(texture1)
+      const texture2 = this.loadManager.items["ut_env_light"]
+      const envMap2 = this.getEnvMapFromHDRTexture(texture2)
       const dynamicEnv = new DynamicEnv(this, {
         envMap1,
         envMap2
@@ -121,12 +124,17 @@ export default class Basic {
       this.scene.environment = dynamicEnv.envMap
       dynamicEnv.setWeight(1)
 
+      const startRoom = new StartRoom(this)
+      this.startRoom = startRoom
+      startRoom.addExisting()
+
       // 时间轴
       const t1 = gsap.timeline()
       this.t1 = t1
       const t2 = gsap.timeline()
       this.t2 = t2
-      console.log("before enter")
+      const t3 = gsap.timeline()
+      this.t3 = t3
       this.enter()
     })
 
@@ -150,12 +158,14 @@ export default class Basic {
   // 进入动画
   enter() {
     this.params.disableInteract = true
-    console.log("this.dynamicEnv:", this.dynamicEnv)
     this.dynamicEnv.setWeight(0)
     this.dynamicEnv.setIntensity(0)
 
     this.params.isCameraMoving = true
-    console.log("enter")
+
+    this.startRoom.lightMat.emissive.set(new Three.Color("#000000"))
+    this.startRoom.lightMat.emissiveIntensity = 0
+
     this.t1.to(this.params.cameraPos, {
       x: 0,
       y: 0.8,
@@ -163,18 +173,34 @@ export default class Basic {
       duration: 8,   // 总时长四秒
       ease: "power2.inOut",   // 控制动画过程中的变化速率
       onComplete: () => {   // 当动画完成时运行的函数
-        // console.log("onComplete")
         this.params.isCameraMoving = false
         Emitter.emit("enter")
       }
     })
+    const lightColor = new Three.Color()
+    const blackColor = new Three.Color("#000000")
+    const whiteColor = new Three.Color("#ffffff")
     this.t2.to(this.params, {
+      lightAlpha: 1,
+      lightIntensity: 1,
+      reflectIntensity: 25,
+      furinaLerpColor: 1,
+      duration: 4,
+      delay: 1,
+      ease: "power2.inOut",
+      onUpdated: () => {
+        lightColor.copy(blackColor).lerp(whiteColor, this.params.lightAlpha)   // c1.lerp(c2,percent) 颜色混合
+        console.log("lightColor:", lightColor)
+        this.startRoom.lightMat.emissive.set(lightColor)
+        this.startRoom.lightMat.emissiveIntensity = this.params.lightIntensity
+      }
+    })
+    this.t3.to(this.params, {
       envIntensity: 1,
       duration: 4,
       delay: 0.5,
       ease: "power2.inOut",
       onUpdate: () => {    // 每次动画更新执行
-        // console.log("onUpdate")
         this.dynamicEnv.setIntensity(this.params.envIntensity)
       }
     }).to(this.params, {
@@ -182,7 +208,6 @@ export default class Basic {
       duration: 4,
       ease: "power2.inOut",
       onUpdate: () => {
-        // console.log("onUpdate")
         this.dynamicEnv.setWeight(this.params.envWeight)
       }
     }, "-=2.5")   // -=2.5:时间轴上，上一个动画结束前，2.5秒的位置

@@ -37,13 +37,19 @@ export default class DynamicEnv {
 
     this.material = material;
   }
+  update() {
+    this.renderer.setRenderTarget(this.fbo.rt)
+    this.renderer.setRenderTarget(null);
+  }
   get envMap() {
     return this.fbo.rt.texture;
   }
   setWeight(value) {
+    console.log("setWeight:", value)
     this.material.uniforms.uWeight.value = value;
   }
   setIntensity(value) {
+    console.log("setIntensity:", value)
     this.material.uniforms.uIntensity.value = value;
   }
 }

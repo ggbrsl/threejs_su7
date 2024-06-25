@@ -1,4 +1,6 @@
+import * as Three from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import Emitter from "./Emitter";
 
 export default class LoadManager {
@@ -17,11 +19,21 @@ export default class LoadManager {
     // 设置加载器
     setLoaders() {
         this.loaders.hdrTextureLoader = new RGBELoader();
+        this.loaders.gltfLoader = new GLTFLoader();
+        this.loaders.textureLoader = new Three.TextureLoader();
     }
     startLoading() {
         for (const resource of this.resourceList) {
             if (resource.type === "hdrTexture") {
                 this.loaders.hdrTextureLoader?.load(resource.path, (file) => {
+                    this.resourceLoaded(resource, file);
+                });
+            } else if (resource.type === "gltfModel") {
+                this.loaders.gltfLoader?.load(resource.path, (file) => {
+                    this.resourceLoaded(resource, file);
+                });
+            } else if (resource.type === "texture") {
+                this.loaders.textureLoader?.load(resource.path, (file) => {
                     this.resourceLoaded(resource, file);
                 });
             }
@@ -31,12 +43,7 @@ export default class LoadManager {
         this.items[resource.name] = file
         this.loaded += 1
         if (this.isLoaded) {
-            // this.emitter.emit()    // 加载完成，发信号
-            Emitter.emit("ready")
-            // this.emitter.on("ready", (a) => {
-            //     console.log(a)
-            // })
-            console.log("xinhao:", Emitter)
+            Emitter.emit("ready")   // 加载完成，发信号
         }
     }
     // 是否加载完毕
