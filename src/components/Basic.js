@@ -19,7 +19,6 @@ import Emitter from "./Tool/Emitter";
 import LoadManager from "./Tool/LoadManager";
 import { resources } from "./resource";
 import StartRoom from "./StartRoom";
-import { onUpdated } from "vue";
 
 export default class Basic {
   bloomEffect;
@@ -188,7 +187,7 @@ export default class Basic {
       duration: 4,
       delay: 1,
       ease: "power2.inOut",
-      onUpdated: () => {
+      onUpdate: () => {
         lightColor.copy(blackColor).lerp(whiteColor, this.params.lightAlpha)   // c1.lerp(c2,percent) 颜色混合
         console.log("lightColor:", lightColor)
         this.startRoom.lightMat.emissive.set(lightColor)

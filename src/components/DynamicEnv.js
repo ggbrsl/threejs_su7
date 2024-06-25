@@ -38,6 +38,7 @@ export default class DynamicEnv {
     this.material = material;
   }
   update() {
+    console.log("~~~update~~~~~~")
     this.renderer.setRenderTarget(this.fbo.rt)
     this.renderer.setRenderTarget(null);
   }
