@@ -3,12 +3,16 @@ import FBO from "./Tool/FBO";
 
 import dynamicEnvVertexShader from "../shaders/dynamicEnv/vert.glsl";
 import dynamicEnvFragmentShader from "../shaders/dynamicEnv/frag.glsl";
+import { FullScreenQuad } from "three-stdlib";
+import Animator from "./Tool/Animator";
+
 
 export default class DynamicEnv {
   constructor(base, config = {}) {
     const { envMap1, envMap2 } = config;
-    const envData = envMap1.source.data;
-    const fbo = new FBO(base, {
+    const envData = envMap1?.source.data;
+    this.base = base
+    const fbo = new FBO(this.base, {
       width: envData.width,
       height: envData.height,
     });
@@ -36,15 +40,29 @@ export default class DynamicEnv {
     });
 
     this.material = material;
-  }
-  update() {
-    console.log("~~~update~~~~~~")
-    this.renderer.setRenderTarget(this.fbo.rt)
-    this.renderer.setRenderTarget(null);
+    console.log("material:", material)
+    const quad = new FullScreenQuad(material);
+    this.quad = quad;
+
+    const animator = new Animator(this.base, { autoRender: true })
+    animator.add(() => {
+      this.base.renderer.setRenderTarget(this.fbo.rt);
+      this.quad.render(this.base.renderer);
+      this.base.renderer.setRenderTarget(null);
+    })
+    animator.update((time) => this.update(time))
   }
   get envMap() {
     return this.fbo.rt.texture;
   }
+  update(time) {
+    1 + 1
+  }
+  // update() {
+  //   this.renderer.setRenderTarget(this.fbo.rt);
+  //   this.quad.render(this.renderer);
+  //   this.renderer.setRenderTarget(null);
+  // }
   setWeight(value) {
     console.log("setWeight:", value)
     this.material.uniforms.uWeight.value = value;

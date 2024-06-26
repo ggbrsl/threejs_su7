@@ -56,20 +56,18 @@ export default class Basic {
     const resourcesToLoad = resources
     this.loadManager = new LoadManager(this, resourcesToLoad)
 
-    console.log("this.loadManager:", this.loadManager)
-
     this.domId = selector;
     // 场景
     this.scene = new Three.Scene();
-    this.scene.fog = new Three.FogExp2(0x000000, 0.01);
-    this.scene.position.y = -2.8;
+    // this.scene.fog = new Three.FogExp2(0x000000, 0.01);
+    // this.scene.position.y = -2.8;
     this.clock = new Three.Clock(); // 时钟
     this.container = document.getElementById(selector);
     this.width = this.container.offsetWidth;
     this.height = this.container.offsetHeight;
 
     this.renderer = new Three.WebGLRenderer({ antialias: true }); // 抗锯齿
-    this.renderer.setPixelRatio(window.devicePixelRatio); // 像素比
+    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio)); // 像素比
     this.renderer.setSize(this.width, this.height);
     this.renderer.setClearColor(0x000000, 1); // 颜色及透明度
     // 使用 ACES Filmic Tone Mapping
@@ -85,9 +83,9 @@ export default class Basic {
 
     // 相机
     this.camera = new Three.PerspectiveCamera(
-      45,
+      70,
       this.width / this.height,
-      1,
+      0.01,
       100
     );
     this.camera.fov = this.params.cameraFov; // 设置相机可见范围(度数：0到180)
@@ -102,15 +100,26 @@ export default class Basic {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement); // 轨道控制器
     this.controls.enableDamping = true; // 启用阻尼，旋转增加惯性效果
     this.controls.dampingFactor = 0.25; // 阻尼系数，范围一般在 0 到 1 之间
-    this.controls.minDistance = 2; // 控制相机最小缩放
-    this.controls.maxDistance = 50;
-    this.controls.maxPolarAngle = Math.PI / 2; // 控制相机最大仰角为90度
+    // this.controls.minDistance = 2; // 控制相机最小缩放
+    // this.controls.maxDistance = 50;
+    // this.controls.maxPolarAngle = Math.PI / 2; // 控制相机最大仰角为90度
+
     this.controls.update();
 
     this.composer = "";
 
     // 环境贴图
     Emitter.on("ready", () => {
+      this.scene.background = new Three.Color("black")
+
+      // 时间轴
+      const t1 = gsap.timeline()
+      this.t1 = t1
+      const t2 = gsap.timeline()
+      this.t2 = t2
+      const t3 = gsap.timeline()
+      this.t3 = t3
+
       const texture1 = this.loadManager.items["ut_env_night"]
       const envMap1 = this.getEnvMapFromHDRTexture(texture1)
       const texture2 = this.loadManager.items["ut_env_light"]
@@ -120,39 +129,25 @@ export default class Basic {
         envMap2
       })
       this.dynamicEnv = dynamicEnv
+      console.log("dynamicEnv:", dynamicEnv)
       this.scene.environment = dynamicEnv.envMap
+      // this.scene.environment = texture2
       dynamicEnv.setWeight(1)
 
       const startRoom = new StartRoom(this)
       this.startRoom = startRoom
       startRoom.addExisting()
 
-      // 时间轴
-      const t1 = gsap.timeline()
-      this.t1 = t1
-      const t2 = gsap.timeline()
-      this.t2 = t2
-      const t3 = gsap.timeline()
-      this.t3 = t3
+
       this.enter()
     })
-
-    // this.initHDRTexture(
-    //   "./textures/t_env_night.hdr",
-    //   "./textures/t_env_light.hdr"
-    // ).then((textureMap) => {
-    //   const dynamicEnv = new DynamicEnv(this, textureMap);
-    //   this.dynamicEnv = dynamicEnv;
-    //   this.scene.environment = dynamicEnv.envMap;
-    //   dynamicEnv.setWeight(1);
-    // });
 
     Emitter.on("enter", () => {
       this.params.disableInteract = false
     })
 
     this.setupResize();
-    this.render();
+    // this.render();
   }
   // 进入动画
   enter() {
@@ -165,11 +160,12 @@ export default class Basic {
     this.startRoom.lightMat.emissive.set(new Three.Color("#000000"))
     this.startRoom.lightMat.emissiveIntensity = 0
 
+    this.params.isCameraMoving = true;
     this.t1.to(this.params.cameraPos, {
       x: 0,
       y: 0.8,
       z: -7,
-      duration: 8,   // 总时长四秒
+      duration: 4,   // 总时长四秒
       ease: "power2.inOut",   // 控制动画过程中的变化速率
       onComplete: () => {   // 当动画完成时运行的函数
         this.params.isCameraMoving = false
@@ -189,7 +185,6 @@ export default class Basic {
       ease: "power2.inOut",
       onUpdate: () => {
         lightColor.copy(blackColor).lerp(whiteColor, this.params.lightAlpha)   // c1.lerp(c2,percent) 颜色混合
-        console.log("lightColor:", lightColor)
         this.startRoom.lightMat.emissive.set(lightColor)
         this.startRoom.lightMat.emissiveIntensity = this.params.lightIntensity
       }
@@ -262,7 +257,7 @@ export default class Basic {
   initPostGrocess() {
     this.initPlane();
     // this.initReflector();
-    this.initComposer();
+    // this.initComposer();
   }
   addModle(path) {
     const dracoLoader = new DRACOLoader();
@@ -273,9 +268,8 @@ export default class Basic {
       path,
       (gltf) => {
         gltf.scene.scale.set(2, 2, 2);
-        gltf.scene.position.y = 0.2;
+        gltf.scene.position.y = 0;
         gltf.scene.name = "carScene";
-        console.log("gltf:", gltf.scene.children);
         gltf.scene.traverse((item) => {
           if (item.isMesh) {
             // 金属材质
@@ -336,11 +330,11 @@ export default class Basic {
     this.camera.aspect = this.width / this.height; // 更新相机视角
     this.camera.updateProjectionMatrix(); // 更新投影矩阵
   }
-  render() {
-    this.stats.begin();
-    this.composer && this.composer.render();
-    this.stats.end();
+  // render() {
+  //   this.stats.begin();
+  //   this.composer && this.composer.render();
+  //   this.stats.end();
 
-    requestAnimationFrame(this.render.bind(this));
-  }
+  //   // requestAnimationFrame(this.render.bind(this));
+  // }
 }
