@@ -5,6 +5,7 @@ export default class StartRoom {
         const model = this.base.loadManager.items["sm_startroom"]
         this.model = model
         const modelArray = this.flatModel(model.scene)   // Group,Mesh,Mesh
+        console.log("~~~modelArray~~~:", modelArray, model)
         // 灯光
         const light001 = modelArray[1]
         const lightMat = light001.material    // MeshStandardMaterial,PBR材质，增强真实渲染效果
@@ -30,6 +31,7 @@ export default class StartRoom {
     flatModel(model) {
         const modelArray = []
         model.traverse(obj => {
+            console.log("@@@@@@@@obj:", obj)
             modelArray.push(obj)
         })
         return modelArray

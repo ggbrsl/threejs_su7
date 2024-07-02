@@ -28,6 +28,6 @@ export default defineComponent({
 #sketch {
   width: 100vw;
   height: 100vh;
-  background-color: aqua;
+  background-color: #26d6e9;
 }
 </style>

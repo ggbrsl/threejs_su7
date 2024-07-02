@@ -19,6 +19,7 @@ import Emitter from "./Tool/Emitter";
 import LoadManager from "./Tool/LoadManager";
 import { resources } from "./resource";
 import StartRoom from "./StartRoom";
+import Car from "./Car";
 
 export default class Basic {
   bloomEffect;
@@ -119,6 +120,8 @@ export default class Basic {
       this.t2 = t2
       const t3 = gsap.timeline()
       this.t3 = t3
+
+      const car = new Car(this)
 
       const texture1 = this.loadManager.items["ut_env_night"]
       const envMap1 = this.getEnvMapFromHDRTexture(texture1)

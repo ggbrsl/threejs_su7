@@ -1,6 +1,7 @@
 import * as Three from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three-stdlib";
 import Emitter from "./Emitter";
 
 export default class LoadManager {
@@ -13,6 +14,8 @@ export default class LoadManager {
         this.setLoaders()
         this.startLoading()
 
+        this.setMeshoptDecoder();
+
         // this.emitter = new Emitter()
         // this.emitter = mitt()
     }
@@ -21,6 +24,11 @@ export default class LoadManager {
         this.loaders.hdrTextureLoader = new RGBELoader();
         this.loaders.gltfLoader = new GLTFLoader();
         this.loaders.textureLoader = new Three.TextureLoader();
+    }
+    // 设置meshopt解码器
+    setMeshoptDecoder() {
+        const meshoptDecoder = MeshoptDecoder();
+        this.loaders.gltfLoader?.setMeshoptDecoder(meshoptDecoder);
     }
     startLoading() {
         for (const resource of this.resourceList) {
@@ -31,6 +39,8 @@ export default class LoadManager {
             } else if (resource.type === "gltfModel") {
                 this.loaders.gltfLoader?.load(resource.path, (file) => {
                     this.resourceLoaded(resource, file);
+                }, undefined, err => {
+                    console.log("gltfLoader error:", err)
                 });
             } else if (resource.type === "texture") {
                 this.loaders.textureLoader?.load(resource.path, (file) => {

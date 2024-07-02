@@ -15,9 +15,9 @@ export const resources = [
         path: "./gltf/startRoom/sm_startroom.raw.gltf",
     },
     {
-        name: "scene",
+        name: "sm_car",
         type: "gltfModel",
-        path: "./gltf/su7/scene.gltf",
+        path: "./gltf/sm_car/sm_car.gltf",
     },
     {
         name: "ut_startroom_ao",
