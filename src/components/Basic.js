@@ -17,9 +17,12 @@ import {
 import Emitter from "./Tool/Emitter";
 // import mitt from "mitt";
 import LoadManager from "./Tool/LoadManager";
+import Clock from "./Tool/Clock";
 import { resources } from "./resource";
 import StartRoom from "./StartRoom";
 import Car from "./Car";
+import CameraControl from "./CameraControl";
+import Animator from "./Tool/Animator";
 
 export default class Basic {
   bloomEffect;
@@ -57,17 +60,19 @@ export default class Basic {
     const resourcesToLoad = resources
     this.loadManager = new LoadManager(this, resourcesToLoad)
 
+    const lookAt = new Three.Vector3(0, 0.8, 0);
+
     this.domId = selector;
     // 场景
     this.scene = new Three.Scene();
     // this.scene.fog = new Three.FogExp2(0x000000, 0.01);
     // this.scene.position.y = -2.8;
-    this.clock = new Three.Clock(); // 时钟
+
     this.container = document.getElementById(selector);
     this.width = this.container.offsetWidth;
     this.height = this.container.offsetHeight;
 
-    this.renderer = new Three.WebGLRenderer({ antialias: true }); // 抗锯齿
+    this.renderer = new Three.WebGLRenderer({ antialias: true, alpha: true }); // 抗锯齿
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio)); // 像素比
     this.renderer.setSize(this.width, this.height);
     this.renderer.setClearColor(0x000000, 1); // 颜色及透明度
@@ -75,6 +80,18 @@ export default class Basic {
     this.renderer.toneMapping = Three.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0; // 调整曝光以获得最佳效果
     this.renderer.localClippingEnabled = true; // 使用剪裁平面
+
+    // 动画
+    const animator = new Animator(this, {
+      autoRender: true
+    })
+    this.animator = animator
+
+    // this.animator.update()
+
+    // 时钟
+    const clock = new Clock(this)
+    this.clock = clock
 
     // 渲染性能监控
     this.stats = new Stats();
@@ -89,6 +106,7 @@ export default class Basic {
       0.01,
       100
     );
+    this.camera.position.z = 1;
     this.camera.fov = this.params.cameraFov; // 设置相机可见范围(度数：0到180)
     const cameraPos = new Three.Vector3(
       this.params.cameraPos.x,
@@ -96,18 +114,33 @@ export default class Basic {
       this.params.cameraPos.z
     );
     this.camera.position.copy(cameraPos);
-    this.camera.lookAt(new Three.Vector3(0, 0.8, 0));
+    this.camera.lookAt(lookAt);
 
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement); // 轨道控制器
-    this.controls.enableDamping = true; // 启用阻尼，旋转增加惯性效果
-    this.controls.dampingFactor = 0.25; // 阻尼系数，范围一般在 0 到 1 之间
-    // this.controls.minDistance = 2; // 控制相机最小缩放
-    // this.controls.maxDistance = 50;
-    // this.controls.maxPolarAngle = Math.PI / 2; // 控制相机最大仰角为90度
 
-    this.controls.update();
+    // 轨道控制器
+    // this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    // this.controls.enableDamping = true; // 启用阻尼，旋转增加惯性效果
+    // this.controls.dampingFactor = 0.25; // 阻尼系数，范围一般在 0 到 1 之间
+    // this.controls.update();
+    const controls = new CameraControl(this)
+    controls.controls.setTarget(lookAt.x, lookAt.y, lookAt.z)
+    this.controls = controls
+    // 开场拉进效果
+    this.animator.add(() => {
+      if (this.params.isCameraMoving) {
+        this.controls.controls.enabled = false
+        this.controls.controls.setPosition(
+          this.params.cameraPos.x,
+          this.params.cameraPos.y,
+          this.params.cameraPos.z
+        )
+      } else {
+        this.controls.controls.enabled = true
+      }
+    })
 
     this.composer = "";
+
 
     // 环境贴图
     Emitter.on("ready", () => {
@@ -122,6 +155,8 @@ export default class Basic {
       this.t3 = t3
 
       const car = new Car(this)
+      this.car = car
+      car.addExisting()
 
       const texture1 = this.loadManager.items["ut_env_night"]
       const envMap1 = this.getEnvMapFromHDRTexture(texture1)
@@ -141,8 +176,10 @@ export default class Basic {
       this.startRoom = startRoom
       startRoom.addExisting()
 
+      this.animator.update()
 
       this.enter()
+      // this.enterDirectly();
     })
 
     Emitter.on("enter", () => {
@@ -152,13 +189,19 @@ export default class Basic {
     this.setupResize();
     // this.render();
   }
+
+  // enterDirectly() {
+  //   this.params.isCameraMoving = false
+  //   this.controls.controls.setPosition(0, 0.8, -7)
+  //   this.params.envIntensity = 1;
+  //   Emitter.emit("enter")
+  // }
+
   // 进入动画
   enter() {
     this.params.disableInteract = true
     this.dynamicEnv.setWeight(0)
     this.dynamicEnv.setIntensity(0)
-
-    this.params.isCameraMoving = true
 
     this.startRoom.lightMat.emissive.set(new Three.Color("#000000"))
     this.startRoom.lightMat.emissiveIntensity = 0
@@ -167,7 +210,7 @@ export default class Basic {
     this.t1.to(this.params.cameraPos, {
       x: 0,
       y: 0.8,
-      z: -7,
+      z: -3,
       duration: 4,   // 总时长四秒
       ease: "power2.inOut",   // 控制动画过程中的变化速率
       onComplete: () => {   // 当动画完成时运行的函数
@@ -208,6 +251,10 @@ export default class Basic {
         this.dynamicEnv.setWeight(this.params.envWeight)
       }
     }, "-=2.5")   // -=2.5:时间轴上，上一个动画结束前，2.5秒的位置
+  }
+
+  handleAssets() {
+
   }
 
   // 初始化渲染平面
@@ -262,36 +309,36 @@ export default class Basic {
     // this.initReflector();
     // this.initComposer();
   }
-  addModle(path) {
-    const dracoLoader = new DRACOLoader();
-    const loader = new GLTFLoader();
-    loader.setDRACOLoader = dracoLoader;
-    // loader.dracoLoader.dispose();
-    loader.load(
-      path,
-      (gltf) => {
-        gltf.scene.scale.set(2, 2, 2);
-        gltf.scene.position.y = 0;
-        gltf.scene.name = "carScene";
-        gltf.scene.traverse((item) => {
-          if (item.isMesh) {
-            // 金属材质
-            item.material.clippingPlanes = [this.localPlane]; // 限制材质的渲染范围，设定裁剪平面
-            item.stencilRef = 1;
-            item.stencilWrite = true;
-            item.stencilWriteMask = 0xff;
-            item.stencilZPass = Three.ReplaceStencilOp;
-            item.geometry.computeVertexNormals();
-          }
-        });
-        this.scene.add(gltf.scene);
-      },
-      undefined,
-      (err) => {
-        console.log("gltf error:", err);
-      }
-    );
-  }
+  // addModle(path) {
+  //   const dracoLoader = new DRACOLoader();
+  //   const loader = new GLTFLoader();
+  //   loader.setDRACOLoader = dracoLoader;
+  //   // loader.dracoLoader.dispose();
+  //   loader.load(
+  //     path,
+  //     (gltf) => {
+  //       gltf.scene.scale.set(2, 2, 2);
+  //       gltf.scene.position.y = 0;
+  //       gltf.scene.name = "carScene";
+  //       gltf.scene.traverse((item) => {
+  //         if (item.isMesh) {
+  //           // 金属材质
+  //           item.material.clippingPlanes = [this.localPlane]; // 限制材质的渲染范围，设定裁剪平面
+  //           item.stencilRef = 1;
+  //           item.stencilWrite = true;
+  //           item.stencilWriteMask = 0xff;
+  //           item.stencilZPass = Three.ReplaceStencilOp;
+  //           item.geometry.computeVertexNormals();
+  //         }
+  //       });
+  //       this.scene.add(gltf.scene);
+  //     },
+  //     undefined,
+  //     (err) => {
+  //       console.log("gltf error:", err);
+  //     }
+  //   );
+  // }
   // load方法包装成promise
   loadHDRTexture(url) {
     return new Promise((resolve, reject) => {

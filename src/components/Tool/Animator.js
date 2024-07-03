@@ -10,6 +10,7 @@ export default class Animator {
         this.task.push(fn)
     }
     update() {
+        // 创建循环
         this.base.renderer.setAnimationLoop(time => {    // 每个可用帧都会调用的函数，可以用来代替requestAnimationFrame的内置函数
             this.tick(time)
         })

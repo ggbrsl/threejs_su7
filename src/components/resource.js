@@ -39,4 +39,9 @@ export const resources = [
         type: "texture",
         path: "./jpg/t_floor_roughness.webp",
     },
+    {
+        name: "ut_car_body_ao",
+        type: "texture",
+        path: "./jpg/t_car_body_AO.raw.jpg",
+    },
 ]

@@ -5,7 +5,7 @@ export default class StartRoom {
         const model = this.base.loadManager.items["sm_startroom"]
         this.model = model
         const modelArray = this.flatModel(model.scene)   // Group,Mesh,Mesh
-        console.log("~~~modelArray~~~:", modelArray, model)
+
         // 灯光
         const light001 = modelArray[1]
         const lightMat = light001.material    // MeshStandardMaterial,PBR材质，增强真实渲染效果
@@ -20,9 +20,9 @@ export default class StartRoom {
         // 地板
         const ReflectFloor = modelArray[2]
         const floorMat = ReflectFloor.material    // MeshPhysicalMaterial,PBR材质，增强真实渲染效果
-        floorMat.aoMap = this.base.loadManager.items["ut_startroom_ao"]   // 环境光遮蔽贴图
-        floorMat.lightMap = this.base.loadManager.items["ut_startroom_light"]
-        floorMat.normalMap = this.base.loadManager.items["ut_floor_normal"]
+        // floorMat.aoMap = this.base.loadManager.items["ut_startroom_ao"]   // ao贴图，模拟物体阴影，增加体积感
+        floorMat.lightMap = this.base.loadManager.items["ut_startroom_light"]   // 光照贴图
+        floorMat.normalMap = this.base.loadManager.items["ut_floor_normal"]    // 法线贴图，通过rgb三个分量分别表示向量的xyz三个方向，保留几何体表面的几何细节
         floorMat.roughnessMap = this.base.loadManager.items["ut_floor_roughness"]
         floorMat.envMapIntensity = 0     // 环境贴图反射率/环境贴图对模型表面的影响能力
 
@@ -31,7 +31,6 @@ export default class StartRoom {
     flatModel(model) {
         const modelArray = []
         model.traverse(obj => {
-            console.log("@@@@@@@@obj:", obj)
             modelArray.push(obj)
         })
         return modelArray

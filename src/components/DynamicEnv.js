@@ -40,23 +40,19 @@ export default class DynamicEnv {
     });
 
     this.material = material;
-    console.log("material:", material)
     const quad = new FullScreenQuad(material);
     this.quad = quad;
 
-    const animator = new Animator(this.base, { autoRender: true })
-    animator.add(() => {
+    // const animator = new Animator(this.base, { autoRender: true })
+    this.base.animator.add(() => {
       this.base.renderer.setRenderTarget(this.fbo.rt);
       this.quad.render(this.base.renderer);
       this.base.renderer.setRenderTarget(null);
     })
-    animator.update((time) => this.update(time))
+    // animator.update()
   }
   get envMap() {
     return this.fbo.rt.texture;
-  }
-  update(time) {
-    1 + 1
   }
   // update() {
   //   this.renderer.setRenderTarget(this.fbo.rt);

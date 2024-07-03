@@ -13,7 +13,7 @@ export default defineComponent({
     onMounted(() => {
       const instance = new Basic("sketch");
       instance.initPostGrocess();
-      instance.addModle("./gltf/su7/scene.gltf");
+      // instance.addModle("./gltf/su7/scene.gltf");
     });
     return {};
   },
