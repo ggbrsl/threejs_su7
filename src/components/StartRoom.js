@@ -1,4 +1,5 @@
 import * as Three from "three";
+import UniformInjector from "./Tool/UniformInjector";
 export default class StartRoom {
     constructor(base) {
         this.base = base
@@ -25,6 +26,9 @@ export default class StartRoom {
         floorMat.normalMap = this.base.loadManager.items["ut_floor_normal"]    // 法线贴图，通过rgb三个分量分别表示向量的xyz三个方向，保留几何体表面的几何细节
         floorMat.roughnessMap = this.base.loadManager.items["ut_floor_roughness"]
         floorMat.envMapIntensity = 0     // 环境贴图反射率/环境贴图对模型表面的影响能力
+
+        const uij = new UniformInjector(this.base)
+        this.uij = uij
 
     }
     // 遍历模型，扁平化

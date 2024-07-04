@@ -7,7 +7,7 @@ export const resources = [
     {
         name: "ut_env_light",
         type: "hdrTexture",
-        path: "./textures/t_env_night.hdr",
+        path: "./textures/t_env_light.hdr",
     },
     {
         name: "sm_startroom",

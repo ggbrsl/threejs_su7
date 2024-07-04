@@ -74,12 +74,12 @@ export default class Basic {
 
     this.renderer = new Three.WebGLRenderer({ antialias: true, alpha: true }); // 抗锯齿
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio)); // 像素比
-    this.renderer.setSize(this.width, this.height);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setClearColor(0x000000, 1); // 颜色及透明度
     // 使用 ACES Filmic Tone Mapping
-    this.renderer.toneMapping = Three.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.0; // 调整曝光以获得最佳效果
-    this.renderer.localClippingEnabled = true; // 使用剪裁平面
+    this.renderer.toneMapping = Three.CineonToneMapping;
+    // this.renderer.toneMappingExposure = 1.0; // 调整曝光以获得最佳效果
+    // this.renderer.localClippingEnabled = true; // 使用剪裁平面
 
     // 动画
     const animator = new Animator(this, {
@@ -144,7 +144,9 @@ export default class Basic {
 
     // 环境贴图
     Emitter.on("ready", () => {
-      this.scene.background = new Three.Color("black")
+      this.handleAssets()
+
+
 
       // 时间轴
       const t1 = gsap.timeline()
@@ -154,9 +156,7 @@ export default class Basic {
       const t3 = gsap.timeline()
       this.t3 = t3
 
-      const car = new Car(this)
-      this.car = car
-      car.addExisting()
+      this.scene.background = new Three.Color("black")
 
       const texture1 = this.loadManager.items["ut_env_night"]
       const envMap1 = this.getEnvMapFromHDRTexture(texture1)
@@ -167,14 +167,20 @@ export default class Basic {
         envMap2
       })
       this.dynamicEnv = dynamicEnv
-      console.log("dynamicEnv:", dynamicEnv)
       this.scene.environment = dynamicEnv.envMap
-      // this.scene.environment = texture2
       dynamicEnv.setWeight(1)
 
       const startRoom = new StartRoom(this)
       this.startRoom = startRoom
       startRoom.addExisting()
+
+      const car = new Car(this)
+      this.car = car
+      car.addExisting()
+
+      car.model.scene.addEventListener("click", () => {
+        console.log("carcarcar")
+      });
 
       this.animator.update()
 
@@ -190,27 +196,21 @@ export default class Basic {
     // this.render();
   }
 
-  // enterDirectly() {
-  //   this.params.isCameraMoving = false
-  //   this.controls.controls.setPosition(0, 0.8, -7)
-  //   this.params.envIntensity = 1;
-  //   Emitter.emit("enter")
-  // }
-
   // 进入动画
   enter() {
     this.params.disableInteract = true
     this.dynamicEnv.setWeight(0)
-    this.dynamicEnv.setIntensity(0)
-
     this.startRoom.lightMat.emissive.set(new Three.Color("#000000"))
     this.startRoom.lightMat.emissiveIntensity = 0
+    this.dynamicEnv.setIntensity(0)
+
+
 
     this.params.isCameraMoving = true;
     this.t1.to(this.params.cameraPos, {
       x: 0,
       y: 0.8,
-      z: -3,
+      z: -3,   // -7
       duration: 4,   // 总时长四秒
       ease: "power2.inOut",   // 控制动画过程中的变化速率
       onComplete: () => {   // 当动画完成时运行的函数
@@ -254,6 +254,18 @@ export default class Basic {
   }
 
   handleAssets() {
+    const items = this.loadManager.items
+    items["ut_car_body_ao"].flipY = false
+    items["ut_car_body_ao"].colorSpace = Three.LinearSRGBColorSpace;
+    items["ut_car_body_ao"].minFilter = Three.NearestFilter;
+    items["ut_car_body_ao"].magFilter = Three.NearestFilter;
+    items["ut_car_body_ao"].channel = 1;
+    items["ut_startroom_ao"].flipY = false;
+    items["ut_startroom_ao"].colorSpace = Three.LinearSRGBColorSpace;
+    items["ut_startroom_ao"].channel = 1;
+    items["ut_startroom_light"].flipY = false;
+    items["ut_startroom_light"].colorSpace = Three.SRGBColorSpace;
+    items["ut_startroom_light"].channel = 1;
 
   }
 
@@ -350,11 +362,11 @@ export default class Basic {
       );
     });
   }
+  // 从hdr贴图中提取envmap
   getEnvMapFromHDRTexture(texture) {
     const pmremGenerator = new Three.PMREMGenerator(this.renderer);
     pmremGenerator.compileEquirectangularShader();
     const envmap = pmremGenerator.fromEquirectangular(texture).texture;
-    console.log("envmap:", envmap);
     pmremGenerator.dispose();
     return envmap;
   }

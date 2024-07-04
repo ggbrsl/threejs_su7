@@ -45,6 +45,7 @@ export default class DynamicEnv {
 
     // const animator = new Animator(this.base, { autoRender: true })
     this.base.animator.add(() => {
+      // 将场景渲染到fbo中
       this.base.renderer.setRenderTarget(this.fbo.rt);
       this.quad.render(this.base.renderer);
       this.base.renderer.setRenderTarget(null);

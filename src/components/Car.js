@@ -8,6 +8,7 @@ export default class Car {
         const modelArray = this.flatModel(model.scene)
         this.modelArray = modelArray
 
+        this.handleModel();
     }
     // 遍历模型，扁平化
     flatModel(model) {
