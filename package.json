@@ -22,6 +22,7 @@
     "stats.js": "^0.17.0",
     "three": "^0.165.0",
     "three-custom-shader-material": "^5.4.0",
+    "three-extended-material": "^0.3.0",
     "three-stdlib": "^2.30.3",
     "vue": "^3.2.13"
   },

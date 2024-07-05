@@ -26,7 +26,7 @@ import Animator from "./Tool/Animator";
 
 export default class Basic {
   bloomEffect;
-  constructor(selector) {
+  constructor(selector, loaderscreen) {
     this.params = {
       speed: 0,
       cameraPos: {
@@ -63,6 +63,7 @@ export default class Basic {
     const lookAt = new Three.Vector3(0, 0.8, 0);
 
     this.domId = selector;
+    this.loaderscreen = loaderscreen
     // 场景
     this.scene = new Three.Scene();
     // this.scene.fog = new Three.FogExp2(0x000000, 0.01);
@@ -155,6 +156,8 @@ export default class Basic {
       this.t2 = t2
       const t3 = gsap.timeline()
       this.t3 = t3
+      const t4 = gsap.timeline()
+      this.t4 = t4
 
       this.scene.background = new Three.Color("black")
 
@@ -204,13 +207,16 @@ export default class Basic {
     this.startRoom.lightMat.emissiveIntensity = 0
     this.dynamicEnv.setIntensity(0)
 
+    this.startRoom.customFloorMat.uniforms.uColor.value.set(new Three.Color('#000000'))
+    this.startRoom.customFloorMat.uniforms.uReflectIntensity.value = 0
 
+    document.querySelector(this.loaderscreen)?.classList.add("hollow")
 
     this.params.isCameraMoving = true;
     this.t1.to(this.params.cameraPos, {
       x: 0,
       y: 0.8,
-      z: -3,   // -7
+      z: -4,   // -7
       duration: 4,   // 总时长四秒
       ease: "power2.inOut",   // 控制动画过程中的变化速率
       onComplete: () => {   // 当动画完成时运行的函数
@@ -233,6 +239,9 @@ export default class Basic {
         lightColor.copy(blackColor).lerp(whiteColor, this.params.lightAlpha)   // c1.lerp(c2,percent) 颜色混合
         this.startRoom.lightMat.emissive.set(lightColor)
         this.startRoom.lightMat.emissiveIntensity = this.params.lightIntensity
+
+        this.startRoom.customFloorMat.uniforms.uColor.value.set(lightColor)
+        this.startRoom.customFloorMat.uniforms.uReflectIntensity.value = this.params.reflectIntensity
       }
     })
     this.t3.to(this.params, {
@@ -266,7 +275,14 @@ export default class Basic {
     items["ut_startroom_light"].flipY = false;
     items["ut_startroom_light"].colorSpace = Three.SRGBColorSpace;
     items["ut_startroom_light"].channel = 1;
-
+    items["ut_floor_normal"].flipY = false;
+    items["ut_floor_normal"].colorSpace = Three.LinearSRGBColorSpace;
+    items["ut_floor_normal"].wrapS = Three.RepeatWrapping;
+    items["ut_floor_normal"].wrapT = Three.RepeatWrapping;
+    items["ut_floor_roughness"].flipY = false;
+    items["ut_floor_roughness"].colorSpace = Three.LinearSRGBColorSpace;
+    items["ut_floor_roughness"].wrapS = Three.RepeatWrapping;
+    items["ut_floor_roughness"].wrapT = Three.RepeatWrapping;
   }
 
   // 初始化渲染平面
@@ -379,6 +395,10 @@ export default class Basic {
       envMap1,
       envMap2,
     };
+  }
+
+  changeColor(color) {
+
   }
 
   setupResize() {

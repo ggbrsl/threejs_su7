@@ -23,14 +23,14 @@ export default class UniformInjector {
       iFrame: {
         value: 0,
       },
-      // iDate: {
-      //     value: new Three.Vector4(
-      //         new Date().getFullYear(),
-      //         new Date().getMonth() + 1,
-      //         new Date().getDate(),
-      //         new Date().getHours()
-      //     ),
-      // },
+      iDate: {
+        value: new Three.Vector4(
+          new Date().getFullYear(),
+          new Date().getMonth() + 1,
+          new Date().getDate(),
+          new Date().getHours()
+        ),
+      },
       iSampleRate: {
         value: 44100,
       },
@@ -50,5 +50,14 @@ export default class UniformInjector {
       1
     );
     // const { x, y } = this.base.iMouse.mouse;
+    // uniforms.iMouse.value = new Three.Vector4(x, y, 0, 0);
+    uniforms.iDate.value = new Three.Vector4(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      new Date().getDate(),
+      new Date().getHours()
+    );
+    uniforms.iChannelTime.value = [t, t, t, t];
+    uniforms.iFrame.value += 1;
   }
 }

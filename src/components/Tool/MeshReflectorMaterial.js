@@ -1,5 +1,6 @@
 import * as Three from "three";
 import FBO from "./FBO";
+import { PackedMipMapGenerator } from "../threejs-sandbox/custom-mipmap-generation/PackedMipMapGenerator";
 
 class MeshReflectorMaterial {
   constructor(base, parent, config) {
@@ -20,8 +21,8 @@ class MeshReflectorMaterial {
       },
     });
 
-    // const mipmapper = new kokomi.PackedMipMapGenerator();
-    // this.mipmapper = mipmapper;
+    const mipmapper = new PackedMipMapGenerator()
+    this.mipmapper = mipmapper;
     const mirrorFBO = this._renderTexture.rt;
     this.mirrorFBO = mirrorFBO;
     const mipmapFBO = new FBO(this.base);
@@ -29,9 +30,11 @@ class MeshReflectorMaterial {
 
     this.base.animator.add(() => {
       this.beforeRender();
+      this.mipmapper.update(this._renderTexture.rt.texture, this.mipmapFBO.rt, this.base.renderer)
     });
   }
 
+  // 反射向量运算
   beforeRender() {
     this.reflectPlane.set(new Three.Vector3(0, 1, 0), 0);
     this.reflectPlane.applyMatrix4(this.parent.matrixWorld);

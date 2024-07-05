@@ -61,11 +61,11 @@ export default class DynamicEnv {
   //   this.renderer.setRenderTarget(null);
   // }
   setWeight(value) {
-    console.log("setWeight:", value)
+    // console.log("setWeight:", value)
     this.material.uniforms.uWeight.value = value;
   }
   setIntensity(value) {
-    console.log("setIntensity:", value)
+    // console.log("setIntensity:", value)
     this.material.uniforms.uIntensity.value = value;
   }
 }
